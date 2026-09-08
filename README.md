@@ -1,6 +1,6 @@
 # Yubalatro：Balatro 自定义开局与分数预览 Mod
 
-为 Windows Steam 版 Balatro 添加「选项 → 自定义开局」，使用原版游戏和原存档。
+为 Steam 版 Balatro 添加「选项 → 自定义开局」，使用原版游戏和原存档。支持 Windows 安装，以及 Linux Steam 通过 Proton 运行 Windows 版游戏的安装方式。
 
 选中手牌时，左侧筹码和倍率下方会显示「本次得分」及出牌后的「回合合计」。
 
@@ -59,7 +59,7 @@
 3. 在解压后的项目目录打开 PowerShell，运行下面的安装命令。脚本会自动寻找 Steam 各库中的 Balatro，不要求两台电脑盘符相同。
 4. 安装完成后正常从 Steam 启动游戏，进入「选项 → 自定义开局」；选牌后即可看到分数预览。
 
-目前安装脚本和分数预览依赖 Windows x64 版游戏的 DLL；macOS、Linux 原生版需要另行适配。已验证游戏版本为 `1.0.1o-FULL`。
+Mod 和分数预览使用 Windows x64 版游戏的 DLL；Linux 请按下节通过 Proton 运行，macOS、Linux 原生 LÖVE 运行方式尚未适配。已验证游戏版本为 `1.0.1o-FULL`。
 
 安装脚本会先备份游戏目录和全部 Balatro 存档，再安装 Lovely 0.9.0 和本 Mod。
 游戏主程序本身不修改。已有 `version.dll` 或同名 Mod 时脚本停止，以保留现有安装。
@@ -82,11 +82,67 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -CheckOnly
 
 安装无需 Python 或 Git，也无需额外安装 Steamodded。Windows 上从 Steam 正常启动即可，目录规则见 [Lovely 官方说明](https://github.com/ethangreen-dev/lovely-injector#manual-installation)。
 
+### 在 Linux Steam 安装（Proton）
+
+本方案面向 x86_64 Linux 电脑，使用 **Windows 版游戏 + Proton + Windows 版 Lovely**。无需运行 PowerShell，也不用另装系统 LÖVE。安装脚本需要 Python 3.8 或更新版本，以及 `pgrep`（通常由 `procps` / `procps-ng` 包提供）；不要使用 `sudo` 运行安装脚本。
+
+1. Steam 中右键 Balatro → **属性 → 兼容性**，勾选强制使用 Steam Play 兼容工具，选择已安装的 Proton（例如 Proton Experimental）。等待 Steam 完成必要的下载，启动一次游戏，然后关闭，以生成 Proton 存档目录。
+2. [下载仓库 ZIP](https://github.com/awenbigprawn/yubalatro/archive/refs/heads/main.zip) 并解压；或在终端执行：
+
+   ```bash
+   git clone https://github.com/awenbigprawn/yubalatro.git
+   cd yubalatro
+   ```
+
+3. 在项目目录的终端执行安装：
+
+   ```bash
+   python3 install-linux.py
+   ```
+
+   脚本会识别常规 Steam、Flatpak Steam 和 `libraryfolders.vdf` 中的额外游戏库，备份游戏和 Proton 中的 Balatro 存档，下载并校验 Lovely 0.9.0，安装 DLL 和 Mod。安装时会打印实际存档路径，并将记录保存在项目目录的 `installation-linux.txt`，备份位于 `backups/linux-*`。
+
+4. Steam → Balatro → **属性 → 通用 → 启动选项**，填写：
+
+   ```text
+   WINEDLLOVERRIDES="version=n,b" %command%
+   ```
+
+   这是 [Lovely 官方的 Proton 加载要求](https://github.com/ethangreen-dev/lovely-injector#manual-installation)。已有其他启动选项时需合并，保留原来的参数。
+
+5. 从 Steam 启动游戏。进入「选项 → 自定义开局」，并选牌查看分数预览。
+
+如果安装检测到多个目录或无法找到目录，可先运行 `python3 install-linux.py --check-only` 查看结果，再手动指定。例如（将路径换成你的实际目录）：
+
+```bash
+python3 install-linux.py \
+  --game-dir "/mnt/games/SteamLibrary/steamapps/common/Balatro" \
+  --prefix "/mnt/games/SteamLibrary/steamapps/compatdata/2379780/pfx"
+```
+
+`--game-dir` 应含 `Balatro.exe` 和 `lua51.dll`；`--prefix` 应含 `drive_c`。自定义 `STEAM_COMPAT_DATA_PATH` 时，需用 `--prefix` 指向其下的 `pfx`。默认 Proton 路径示例：
+
+| Steam 安装方式 | Balatro 存档与配置目录 |
+| --- | --- |
+| 常规 Steam | `~/.local/share/Steam/steamapps/compatdata/2379780/pfx/drive_c/users/steamuser/AppData/Roaming/Balatro` |
+| Flatpak Steam | `~/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/compatdata/2379780/pfx/drive_c/users/steamuser/AppData/Roaming/Balatro` |
+| 其他游戏库 | 对应库的 `steamapps/compatdata/2379780/pfx/drive_c/users/steamuser/AppData/Roaming/Balatro` |
+
+以安装脚本检测并打印的路径为准。Mod 位于存档目录的 `Mods/Yubalatro`，自定义配置是存档目录的 `yubalatro-settings.txt`。
+
+**已有 Lovely：** 脚本不会覆盖现有 `version.dll`。确认使用兼容的 Windows 版 Lovely（本项目验证版本为 0.9.0）后，手动将仓库的整个 `mod` 文件夹复制到上述存档目录的 `Mods` 下并改名为 `Yubalatro`，使文件层级为 `Mods/Yubalatro/lovely.toml`；再设置第 4 步的启动选项。其他 Mod 的计分机制不保证兼容。
+
+**更新 / 卸载：** 关闭游戏，将已安装的 `Mods/Yubalatro` 文件夹移到 `Mods` 之外备份；更新时再复制最新版 `mod` 文件夹并改名为 `Yubalatro`。卸载时不必恢复旧存档；如果没有其他 Mod 依赖 Lovely，且游戏目录的 `version.dll` 是本脚本安装的版本，也可将该 DLL 移到游戏目录之外，并撤去对应的启动选项。`installation-linux.txt` 记录了安装路径和 DLL 哈希。
+
+Linux 安装流程已通过 WSL/Linux 中的模拟目录测试；目前未在真实 Linux Steam / Proton 游戏进程中验证计分与界面。
+
 ### 存档和自定义设置
 
 仓库只分发 Mod 源码、脚本和测试，不包含 Balatro 游戏本体或个人存档。另一台电脑使用自己的 Steam 游戏安装与本机档案；如果使用 Steam 云存档，启动前先等待同步完成。
 
 Mod 需要在每台电脑分别安装。若要把自定义开局数值也带过去，在两边游戏关闭时，将原电脑的 `%APPDATA%\Balatro\yubalatro-settings.txt` 复制到另一台电脑相同位置；也可以直接在游戏中重新设置。
+
+Windows → Linux 时，将该文件复制到上节安装脚本打印的 Proton 存档目录下。不要把 Windows 的 `installation.json` 或整个游戏目录复制过去。
 
 ### 卸载
 
@@ -104,6 +160,7 @@ powershell -ExecutionPolicy Bypass -File .\uninstall.ps1
 ## 实现与验证
 
 - 已验证 Windows Steam Balatro `1.0.1o-FULL`。
+- `python3 -m unittest discover -s tests -p 'test_linux_installer.py'`：使用临时目录核对 Linux Steam / Flatpak / 外置库检测、路径歧义、备份、安装和拒绝覆盖已有加载器。
 - 仅依赖 [Lovely 0.9.0](https://github.com/ethangreen-dev/lovely-injector/releases/tag/v0.9.0)，无需 Steamodded。
 - 按 [Lovely 官方安装与补丁文档](https://github.com/ethangreen-dev/lovely-injector)使用运行时补丁。
 - 计分库随 Mod 附带，基于 [Divvy's Simulation](https://github.com/DivvyCr/Balatro-Simulation)，上游版本与本地修正见 [NOTICE](mod/vendor/divvy/NOTICE.md)。Mod 按 [GPL-3.0](mod/LICENSE)提供完整源码。

@@ -2,4 +2,5 @@
 /.cache/
 /.qa/
 /installation.json
+/installation-linux.txt
 __pycache__/
