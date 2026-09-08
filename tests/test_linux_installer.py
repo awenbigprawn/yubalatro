@@ -98,6 +98,20 @@ class InstallerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'outside the game'):
             installer.install(game, save, game / 'checkout')
 
+    def test_update_preserves_settings_loader_and_old_mod_backup(self):
+        game, save, _ = self.library(self.home / '.local/share/Steam')
+        with patch.object(installer, 'ARCHIVE_HASH', self.archive()):
+            installer.install(game, save, self.root)
+        (save / 'yubalatro-settings.txt').write_text('dollars=123')
+        (self.root / 'mod/lovely.toml').write_text('updated mod')
+        installer.update_mod(game, save, self.root)
+        self.assertEqual((save / 'Mods/Yubalatro/lovely.toml').read_text(), 'updated mod')
+        self.assertEqual((save / 'yubalatro-settings.txt').read_text(), 'dollars=123')
+        self.assertEqual((save / 'profile.jkr').read_bytes(), b'original save')
+        self.assertEqual((game / 'version.dll').read_bytes(), b'test loader')
+        backup = next((self.root / 'backups').glob('linux-mod-update-*'))
+        self.assertEqual((backup / 'Yubalatro/lovely.toml').read_text(), 'test mod')
+
 
 if __name__ == '__main__':
     unittest.main()

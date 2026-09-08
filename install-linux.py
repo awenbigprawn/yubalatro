@@ -117,11 +117,30 @@ def install(game, save, root=ROOT):
     print('Installed: ' + str(destination))
 
 
+def update_mod(game, save, root=ROOT):
+    destination = save / 'Mods/Yubalatro'
+    source = root / 'mod'
+    if not (destination / 'lovely.toml').is_file() or not (game / 'version.dll').is_file():
+        raise ValueError('No installed Yubalatro/Lovely found. Run without --update to install first.')
+    if not (source / 'lovely.toml').is_file():
+        raise ValueError('Missing mod/lovely.toml in this repository.')
+    if inside(root, destination) or inside(destination, root):
+        raise ValueError('Keep the repository separate from the installed mod.')
+    backup = root / 'backups' / ('linux-mod-update-' + datetime.now().strftime('%Y%m%d-%H%M%S-%f'))
+    backup.mkdir(parents=True)
+    shutil.copytree(destination, backup / 'Yubalatro', symlinks=True)
+    # Overlay source files only; save/config files and the Lovely DLL stay intact.
+    shutil.copytree(source, destination, dirs_exist_ok=True)
+    print('Updated: ' + str(destination))
+    print('Previous mod: ' + str(backup / 'Yubalatro'))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--game-dir', help='Steam game directory containing Balatro.exe')
     parser.add_argument('--prefix', help='Proton prefix directory ending in compatdata/2379780/pfx')
     parser.add_argument('--check-only', action='store_true', help='Show detected paths without installing')
+    parser.add_argument('--update', action='store_true', help='Back up and update an existing mod; preserve saves, settings and loader')
     args = parser.parse_args()
     if sys.platform != 'linux':
         parser.exit(1, 'This installer is for Linux Steam + Proton. On Windows use install.ps1.\n')
@@ -133,7 +152,10 @@ def main():
             running = subprocess.run(['pgrep', '-ix', r'Balatro(\.exe)?'], stdout=subprocess.DEVNULL)
             if running.returncode != 1:
                 raise ValueError('Close Balatro before installing (process check must succeed).')
-            install(game, save)
+            if args.update:
+                update_mod(game, save)
+            else:
+                install(game, save)
         print('Steam > Properties > General > Launch Options:\n' + LAUNCH_OPTIONS)
     except (OSError, ValueError, zipfile.BadZipFile, KeyError) as error:
         parser.exit(1, 'Installation stopped: ' + str(error) + '\n')

@@ -96,6 +96,12 @@ function M.ui()
         input.config.draw_layer = nil
         input.nodes[1].config.draw_layer = nil
         input.nodes[1].config.id = 'yubalatro_' .. key
+        -- Vanilla's flash callback resizes every cursor when ANY field is active,
+        -- recursively recalculating this multi-input overlay partway through layout.
+        -- Reserve a fixed cursor width and blink only the active field's cursor.
+        for _, child in ipairs(input.nodes[1].nodes[1].nodes[1].nodes) do
+            if child.config.id == 'position' then child.config.func = 'yubalatro_cursor' end
+        end
         contents[#contents + 1] = {n = G.UIT.R, config = {align = 'cm', padding = 0.10}, nodes = {
             {n = G.UIT.C, config = {align = 'cr', minw = 4.2}, nodes = {
                 {n = G.UIT.T, config = {text = M.text(key), scale = 0.36, colour = G.C.UI.TEXT_LIGHT}}
@@ -118,6 +124,11 @@ function M.ui()
     contents[#contents + 1] = UIBox_button({button = 'yubalatro_save', label = {M.text('save')}, minw = 5, colour = G.C.BLUE})
     contents[#contents + 1] = UIBox_button({button = 'yubalatro_reset', label = {M.text('reset')}, minw = 5})
     return create_UIBox_generic_options({back_func = 'options', contents = contents})
+end
+
+G.FUNCS.yubalatro_cursor = function(e)
+    e.config.colour[4] = G.CONTROLLER.text_input_hook == e.parent
+        and math.floor(G.TIMERS.REAL * 2) % 2 == 0 and 1 or 0
 end
 
 local function show_settings()

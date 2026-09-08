@@ -14,7 +14,7 @@ if '--lovely' in sys.argv:
         sources = {n: original_zip.read(n) for n in original_zip.namelist() if n.endswith('.lua')}
     shutil.copy2(GAME / 'version.dll', qa / 'version.dll')
 sources['conf.lua'] += b"\nlocal original_conf = love.conf\nfunction love.conf(t) original_conf(t); t.identity = 'YubalatroQA'; t.window.title = 'Yubalatro QA'; end\n"
-driver = 'scoring.lua' if '--scoring' in sys.argv else 'runtime.lua'
+driver = 'ui_layout.lua' if '--ui-layout' in sys.argv else ('scoring.lua' if '--scoring' in sys.argv else 'runtime.lua')
 first_case = next((int(a.split('=', 1)[1]) for a in sys.argv if a.startswith('--qa-from=')), 1)
 sources['main.lua'] += f'\nYUBALATRO_QA_FROM = {first_case}\n'.encode()
 sources['main.lua'] += b'\n' + (ROOT / 'tests' / driver).read_bytes()

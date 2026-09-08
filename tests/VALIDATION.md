@@ -4,6 +4,13 @@ Balatro 1.0.1o-FULL, Windows, Lovely 0.9.0.
 
 The settings runtime test confirms the overlay and buttons retain their object identity, the room jiggle value is unchanged, and editing, saving and reset remain functional.
 
+The UI layout regression reproduced offscreen titles/labels after the first plus
+click in the previous version. With per-field, fixed-width cursors, the real
+Lovely-loaded game passes visibility checks after plus/minus, 9 to 10, all three
+fields, reset, typing nine digits, 999999998 to 999999999, and 40 repeated clicks.
+Overlay/button identity and unchanged room jiggle are checked; screenshots were
+also inspected. These are Windows runtime checks, not a Linux Proton playtest.
+
 The following 24 scenarios compare a preview against a real played hand. Each also checks repeated predictions, RNG preservation, card abilities, money, hand levels, blind state, and restoration after an injected simulation error. Tests use the separate YubalatroQA profile.
 
 | Scenario | Preview = actual score |

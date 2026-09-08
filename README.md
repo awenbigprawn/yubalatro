@@ -132,7 +132,16 @@ python3 install-linux.py \
 
 **已有 Lovely：** 脚本不会覆盖现有 `version.dll`。确认使用兼容的 Windows 版 Lovely（本项目验证版本为 0.9.0）后，手动将仓库的整个 `mod` 文件夹复制到上述存档目录的 `Mods` 下并改名为 `Yubalatro`，使文件层级为 `Mods/Yubalatro/lovely.toml`；再设置第 4 步的启动选项。其他 Mod 的计分机制不保证兼容。
 
-**更新 / 卸载：** 关闭游戏，将已安装的 `Mods/Yubalatro` 文件夹移到 `Mods` 之外备份；更新时再复制最新版 `mod` 文件夹并改名为 `Yubalatro`。卸载时不必恢复旧存档；如果没有其他 Mod 依赖 Lovely，且游戏目录的 `version.dll` 是本脚本安装的版本，也可将该 DLL 移到游戏目录之外，并撤去对应的启动选项。`installation-linux.txt` 记录了安装路径和 DLL 哈希。
+**更新：** 关闭游戏，在仓库目录运行以下命令（ZIP 下载用户先下载并解压最新版，再运行第二条）：
+
+```bash
+git pull
+python3 install-linux.py --update
+```
+
+更新会先备份旧 Mod，再复制新版文件，保留存档、自定义设置和 Lovely。自定义路径时仍可加 `--game-dir` 和 `--prefix`。只执行 `git pull` 不会更新游戏实际加载的 Mod 目录。
+
+**卸载：** 关闭游戏，将已安装的 `Mods/Yubalatro` 文件夹移到 `Mods` 之外备份。卸载时不必恢复旧存档；如果没有其他 Mod 依赖 Lovely，且游戏目录的 `version.dll` 是本脚本安装的版本，也可将该 DLL 移到游戏目录之外，并撤去对应的启动选项。`installation-linux.txt` 记录了安装路径和 DLL 哈希。
 
 Linux 安装流程已通过 WSL/Linux 中的模拟目录测试；目前未在真实 Linux Steam / Proton 游戏进程中验证计分与界面。
 
@@ -166,6 +175,7 @@ powershell -ExecutionPolicy Bypass -File .\uninstall.ps1
 - 计分库随 Mod 附带，基于 [Divvy's Simulation](https://github.com/DivvyCr/Balatro-Simulation)，上游版本与本地修正见 [NOTICE](mod/vendor/divvy/NOTICE.md)。Mod 按 [GPL-3.0](mod/LICENSE)提供完整源码。
 - `py -3.12 tests/verify.py`：使用游戏自带 LuaJIT 检查补丁定位、Lua 编译、参数边界、配置保存及默认行为。默认自动检测游戏目录，也可通过环境变量 `BALATRO_GAME_DIR` 指定。
 - `py -3.12 tests/build_qa.py`：从本机游戏构建仅用于测试的副本，使用独立 `YubalatroQA` 存档目录；其自动测试驱动不会安装进正式 Mod。
+- `py -3.12 tests/build_qa.py --lovely --ui-layout`：检查加减、跨位数、直接输入和重置后下一帧的文字可见范围，复现并防止多输入框光标导致的布局错位。
 - `py -3.12 tests/build_qa.py --lovely --scoring`：使用实际 Lovely 加载和自动出牌测试，核对预览与实际得分，以及正常和异常路径上的状态恢复。运行 QA 副本时使用 `--mod-dir` 指向测试 Mod 目录。
 
 `backups`、`.qa` 和 `.cache` 含本机游戏、个人存档或下载文件，已加入 `.gitignore`，不属于 Mod 源码。
