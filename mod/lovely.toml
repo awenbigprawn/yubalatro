@@ -1,0 +1,39 @@
+[manifest]
+version = "1.0.0"
+priority = 10
+dump_lua = false
+
+[[patches]]
+[patches.copy]
+target = "main.lua"
+position = "append"
+sources = ["vendor/divvy/Init.lua", "vendor/divvy/Engine.lua", "vendor/divvy/Utils.lua", "vendor/divvy/Jokers/_Vanilla.lua", "yubalatro.lua", "preview.lua"]
+
+[[patches]]
+[patches.pattern]
+target = "game.lua"
+pattern = "self.GAME.round_resets.hands = self.GAME.starting_params.hands"
+position = "before"
+payload = "YUBALATRO.apply(self.GAME)"
+match_indent = true
+times = 1
+
+[[patches]]
+[patches.pattern]
+target = "functions/UI_definitions.lua"
+pattern = "settings,"
+position = "after"
+payload = "UIBox_button({button = 'yubalatro_settings', label = {YUBALATRO.text('title')}, minw = 5, colour = G.C.BLUE}),"
+match_indent = true
+times = 1
+
+# The vanilla seed editor turns zero into the letter O. Preserve real zeros
+# only in this mod's numeric fields; all other text inputs retain vanilla logic.
+[[patches]]
+[patches.pattern]
+target = "functions/button_callbacks.lua"
+pattern = "if args.key == '0' then args.key = 'o' end"
+position = "at"
+payload = "if args.key == '0' and not G.CONTROLLER.text_input_hook.config.ref_table.yubalatro_numeric then args.key = 'o' end"
+match_indent = true
+times = 1
