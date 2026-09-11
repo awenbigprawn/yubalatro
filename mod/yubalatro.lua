@@ -1,12 +1,13 @@
 -- Standalone Lovely mod. No Steamodded dependency.
 YUBALATRO = {path = 'yubalatro-settings.txt'}
 local M = YUBALATRO
-local fields = {'hand_size', 'hands', 'dollars'}
-local limits = {hand_size = {1, 52}, hands = {1, 99}, dollars = {0, 999999999}}
+local fields = {'hand_size', 'hands', 'discards', 'dollars'}
+local limits = {hand_size = {1, 52}, hands = {1, 99}, discards = {0, 99}, dollars = {0, 999999999}}
 local strings = {
     title = {'自定义开局', 'Custom start'},
     hand_size = {'手牌上限 (1-52)', 'Hand size (1-52)'},
     hands = {'每回合出牌次数 (1-99)', 'Hands per round (1-99)'},
+    discards = {'每回合弃牌次数 (0-99)', 'Discards per round (0-99)'},
     dollars = {'初始金钱 (0-999999999)', 'Starting money (0-999999999)'},
     hint = {'灰色数字为当前牌组的原版开局值；留空可恢复。', 'Grey numbers show vanilla starts for this deck; clear to restore.'},
     next_run = {'保存后仅对新开局生效，继续游戏保留原数值。', 'Saved settings apply to new runs; continued runs keep their values.'},

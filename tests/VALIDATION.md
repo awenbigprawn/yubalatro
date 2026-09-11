@@ -1,5 +1,12 @@
 # Validation — 2026-09-08
 
+Custom discards update — 2026-09-12: Windows Lovely runtime verifies the red
+deck's default of 4, +/- editing, a new run with 6 discards, retaining 6 per
+round / 4 remaining on continue despite a new setting of 20, zero discards,
+and reset to vanilla. LuaJIT checks cover 0–99 boundaries, persistence, old
+configs without the new field, deck and challenge defaults. The four-field
+settings layout is checked after edits and reset by the UI regression driver.
+
 Balatro 1.0.1o-FULL, Windows, Lovely 0.9.0.
 
 The settings runtime test confirms the overlay and buttons retain their object identity, the room jiggle value is unchanged, and editing, saving and reset remain functional.

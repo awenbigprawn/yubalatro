@@ -70,10 +70,12 @@ love.update = function(dt)
             assert(YUBALATRO.draft.hand_size == '10')
             pending = function()
                 press(G.FUNCS.yubalatro_hands_plus)
+                press(G.FUNCS.yubalatro_discards_plus)
                 press(G.FUNCS.yubalatro_dollars_plus)
             end
         elseif step == 6 then
             check('ui-all-fields')
+            assert(YUBALATRO.draft.discards == '5')
             pending = function() press(G.FUNCS.yubalatro_reset) end
         elseif step == 7 then
             check('ui-after-reset')

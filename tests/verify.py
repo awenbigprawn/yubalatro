@@ -84,30 +84,41 @@ def verify():
         assert(not select(2, M.parse('hand_size', '0')))
         assert(not select(2, M.parse('hand_size', '53')))
         assert(not select(2, M.parse('hands', '100')))
-        local game = {starting_params = {hand_size = 10, hands = 5, dollars = 14}}
+        assert(M.parse('discards', '0') == 0 and M.parse('discards', '99') == 99)
+        for _, value in ipairs({'-1', '100', '1.5', 'abc'}) do
+            assert(not select(2, M.parse('discards', value)))
+        end
+        local game = {starting_params = {hand_size = 10, hands = 5, discards = 3, dollars = 14}}
         M.apply(game)
         assert(game.starting_params.hand_size == 10 and game.starting_params.dollars == 14)
-        M.draft = {hand_size = '12', hands = '8', dollars = '1000'}
+        assert(game.starting_params.discards == 3, 'old config must retain vanilla discards')
+        M.draft = {hand_size = '12', hands = '8', discards = '6', dollars = '1000'}
         G.FUNCS.yubalatro_save()
         M.apply(game)
         assert(game.starting_params.hand_size == 12 and game.starting_params.hands == 8 and game.starting_params.dollars == 1000)
+        assert(game.starting_params.discards == 6 and M.load().discards == 6)
         local previous = fake_disk[M.path]
         M.draft.dollars = 'invalid'
         G.FUNCS.yubalatro_save()
         assert(fake_disk[M.path] == previous)
-        M.draft = {hand_size = '', hands = '', dollars = '0'}
+        M.draft = {hand_size = '', hands = '', discards = '0', dollars = '0'}
         G.FUNCS.yubalatro_save()
         game.starting_params.hand_size = 10
         M.apply(game)
         assert(game.starting_params.hand_size == 10 and game.starting_params.dollars == 0)
+        assert(game.starting_params.discards == 0)
         fake_disk[M.path] = 'hand_size=999\\nhands=5\\ndollars=oops\\n'
         local config = M.load()
         assert(config.hand_size == nil and config.dollars == nil and config.hands == 5)
-        get_starting_params = function() return {hand_size = 8, hands = 4, dollars = 4} end
-        G.GAME = {selected_back = {effect = {config = {hand_size = 2, hands = 1, dollars = 10}}}}
+        get_starting_params = function() return {hand_size = 8, hands = 4, discards = 3, dollars = 4} end
+        G.GAME = {selected_back = {effect = {config = {hand_size = 2, hands = 1, discards = 1, dollars = 10}}}}
         M.base_values = M.defaults()
         assert(M.base_values.hand_size == 10 and M.base_values.hands == 5 and M.base_values.dollars == 14)
-        M.draft = {hand_size = '', hands = '', dollars = ''}
+        assert(M.base_values.discards == 4, 'red deck default')
+        M.draft = {hand_size = '', hands = '', discards = '', dollars = ''}
+        assert(M.step('discards', 1) and M.draft.discards == '5')
+        M.draft.discards = '0'; M.step('discards', -1); assert(M.draft.discards == '0')
+        M.draft.discards = '99'; M.step('discards', 1); assert(M.draft.discards == '99')
         assert(M.step('hand_size', 1) and M.draft.hand_size == '11')
         assert(M.step('hands', -1) and M.draft.hands == '4')
         assert(M.step('dollars', 1) and M.draft.dollars == '15')
@@ -117,8 +128,9 @@ def verify():
         M.draft.dollars = '999999999'; M.step('dollars', 1)
         assert(M.draft.dollars == '999999999')
         M.draft.dollars = 'invalid'; assert(not M.step('dollars', 1))
-        G.GAME.challenge_tab = {rules = {modifiers = {{id = 'dollars', value = 0}}}}
+        G.GAME.challenge_tab = {rules = {modifiers = {{id = 'dollars', value = 0}, {id = 'discards', value = 1}}}}
         assert(M.defaults().dollars == 0)
+        assert(M.defaults().discards == 1)
     ''', 'behavior tests', True)
     lua.lua_close(state)
     print(f'PASS: {len(sources)} Lua sources compile; all patch anchors unique; validation, persistence, vanilla defaults and zero money verified.')
