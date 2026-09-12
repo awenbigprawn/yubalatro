@@ -1,5 +1,15 @@
 # Validation — 2026-09-08
 
+Space fast-forward update — 2026-09-12: Windows / Lovely gameplay tests replay
+three seeded inputs at normal speed, with Space held, and with Space toggled
+every 0.2 seconds. All nine runs match the simulator and the same-input baseline:
+glass retriggers 1760, lucky/bloodstone/misprint 51944, Hook/steel 35. With base
+speed 4, measured normal vs held durations are 4.905 vs 2.202 s, 6.407 vs 3.704 s,
+and 3.704 vs 1.902 s. Event/frame overhead means wall time is not exactly divided
+by four. The harness checks the applied speed each frame and that saved speed
+remains 4; LuaJIT checks cover release, focus loss, menus, pause and text input.
+Input/focus are simulated by the disposable driver; Linux Proton was not played.
+
 Custom discards update — 2026-09-12: Windows Lovely runtime verifies the red
 deck's default of 4, +/- editing, a new run with 6 discards, retaining 6 per
 round / 4 remaining on continue despite a new setting of 20, zero discards,

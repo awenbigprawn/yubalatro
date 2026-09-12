@@ -131,9 +131,30 @@ def verify():
         G.GAME.challenge_tab = {rules = {modifiers = {{id = 'dollars', value = 0}, {id = 'discards', value = 1}}}}
         assert(M.defaults().dollars == 0)
         assert(M.defaults().discards == 1)
+        -- Physical key polling must also work while normal game input is locked.
+        G.STAGES = {RUN = 1, MAIN_MENU = 2}
+        G.STATES = {HAND_PLAYED = 1, NEW_ROUND = 2, ROUND_EVAL = 3, SELECTING_HAND = 4, SHOP = 5}
+        G.STAGE = G.STAGES.RUN
+        local held, focused = true, true
+        love.keyboard = {isDown = function(key) assert(key == 'space'); return held end}
+        love.window = {hasFocus = function() return focused end}
+        G.CONTROLLER.locked = true
+        G.SETTINGS.GAMESPEED = 2
+        for _, state in ipairs({1, 2, 3}) do
+            G.STATE = state; assert(M.fast_forward_multiplier() == 4)
+        end
+        held = false; assert(M.fast_forward_multiplier() == 1); held = true
+        focused = false; assert(M.fast_forward_multiplier() == 1); focused = true
+        G.SETTINGS.paused = true; assert(M.fast_forward_multiplier() == 1); G.SETTINGS.paused = false
+        G.OVERLAY_MENU = {}; assert(M.fast_forward_multiplier() == 1); G.OVERLAY_MENU = nil
+        G.CONTROLLER.text_input_hook = {}; assert(M.fast_forward_multiplier() == 1); G.CONTROLLER.text_input_hook = nil
+        G.screenwipe = {}; assert(M.fast_forward_multiplier() == 1); G.screenwipe = nil
+        for _, state in ipairs({4, 5}) do G.STATE = state; assert(M.fast_forward_multiplier() == 1) end
+        G.STATE = 1; G.STAGE = G.STAGES.MAIN_MENU; assert(M.fast_forward_multiplier() == 1)
+        assert(G.SETTINGS.GAMESPEED == 2, 'fast forward changed the saved speed')
     ''', 'behavior tests', True)
     lua.lua_close(state)
-    print(f'PASS: {len(sources)} Lua sources compile; all patch anchors unique; validation, persistence, vanilla defaults and zero money verified.')
+    print(f'PASS: {len(sources)} Lua sources compile; patch anchors, settings, and hold/release fast-forward guards verified.')
 
 
 if __name__ == '__main__':

@@ -25,6 +25,15 @@ function M.text(key)
     return strings[key][(lang == 'zh_CN' or lang == 'zh_TW') and 1 or 2]
 end
 
+function M.fast_forward_multiplier()
+    if G.STAGE ~= G.STAGES.RUN or G.SETTINGS.paused or G.OVERLAY_MENU or G.screenwipe
+        or (G.CONTROLLER and G.CONTROLLER.text_input_hook) then return 1 end
+    local settling = G.STATE == G.STATES.HAND_PLAYED or G.STATE == G.STATES.NEW_ROUND
+        or G.STATE == G.STATES.ROUND_EVAL
+    if settling and love.window.hasFocus() and love.keyboard.isDown('space') then return 4 end
+    return 1
+end
+
 function M.parse(key, value)
     if value == nil or value == '' then return nil, true end
     local s = tostring(value)

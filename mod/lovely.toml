@@ -20,6 +20,15 @@ times = 1
 
 [[patches]]
 [patches.pattern]
+target = "game.lua"
+pattern = "self.SPEEDFACTOR = self.SPEEDFACTOR + math.max(0, math.abs(G.ACC) - 2)"
+position = "after"
+payload = "self.SPEEDFACTOR = self.SPEEDFACTOR * YUBALATRO.fast_forward_multiplier()"
+match_indent = true
+times = 1
+
+[[patches]]
+[patches.pattern]
 target = "functions/UI_definitions.lua"
 pattern = "settings,"
 position = "after"

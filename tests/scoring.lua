@@ -2,6 +2,10 @@
 local load_game, update_game = love.load, love.update
 local elapsed, stage, index, pending = 0, 0, (YUBALATRO_QA_FROM or 1) - 1, nil
 local P
+local fast_test = YUBALATRO_QA_FAST_FORWARD
+local space_held, sampled_speed = false, nil
+local boost_frames, normal_frames, durations = 0, 0, {}
+local starting_rng, normal_scores = {}, {}
 local cases = {
     {name = 'high card', ranks = {'H_A'}},
     {name = 'pair', ranks = {'H_5', 'S_5'}},
@@ -29,7 +33,20 @@ local cases = {
     {name = 'last hand dusk acrobat', ranks = {'H_K'}, jokers = {'j_dusk', 'j_acrobat'}, last_hand = true},
 }
 local function report(text)
-    local f = assert(io.open('scoring-result.txt', 'a')); f:write(text .. '\n'); f:close()
+    local f = assert(io.open(fast_test and 'fast-forward-result.txt' or 'scoring-result.txt', 'a')); f:write(text .. '\n'); f:close()
+end
+if fast_test then
+    local selected = {}
+    for _, i in ipairs({6, 13, 18}) do
+        for _, mode in ipairs({'normal', 'held', 'toggle'}) do
+            local case = {}
+            for k, v in pairs(cases[i]) do case[k] = v end
+            case.speed_mode, case.base_name = mode, case.name
+            case.name = case.name .. ' / ' .. mode
+            selected[#selected + 1] = case
+        end
+    end
+    cases = selected
 end
 local function capture(name)
     love.graphics.captureScreenshot(function(data)
@@ -54,9 +71,30 @@ love.load = function()
     load_game()
     G.SETTINGS.GAMESPEED = 4
     P = YUBALATRO.preview
+    if fast_test then
+        local isDown = love.keyboard.isDown
+        love.keyboard.isDown = function(key, ...) if key == 'space' then return space_held end; return isDown(key, ...) end
+        love.window.hasFocus = function() return true end -- Hidden QA window only.
+        local multiplier = YUBALATRO.fast_forward_multiplier
+        YUBALATRO.fast_forward_multiplier = function()
+            local factor = multiplier()
+            sampled_speed = G.SPEEDFACTOR * factor
+            if G.STATE == G.STATES.HAND_PLAYED then
+                if factor == 4 then boost_frames = boost_frames + 1 else normal_frames = normal_frames + 1 end
+            end
+            return factor
+        end
+    end
     report('START scoring integration')
 end
 local function setup(case)
+    if fast_test then
+        if case.speed_mode == 'normal' then
+            starting_rng[case.base_name] = DV.SIM.deep_copy(G.GAME.pseudorandom)
+        else
+            DV.SIM.deep_update(G.GAME.pseudorandom, starting_rng[case.base_name])
+        end
+    end
     G.hand:unhighlight_all()
     for i = #G.jokers.cards, 1, -1 do
         local card = G.jokers.cards[i]; card:remove_from_deck(); card:remove()
@@ -72,6 +110,7 @@ local function setup(case)
     local h = G.GAME.hands['High Card']
     h.level = case.level or 1; h.chips = h.s_chips + (h.level - 1)*h.l_chips; h.mult = h.s_mult + (h.level - 1)*h.l_mult
     for i, card in ipairs(G.hand.cards) do
+        if fast_test then card.sort_id = i end -- Stable Hook discard order across replayed inputs.
         card:set_base(G.P_CARDS[case.ranks[i] or case.held_all or (i == #case.ranks + 1 and case.held) or 'C_3'])
         card:set_ability(G.P_CENTERS[(case.enhancements and case.enhancements[i]) or (i == #case.ranks + 1 and case.held_enhancement) or 'c_base'], nil, true)
         card:set_edition(case.editions and case.editions[i] and {[case.editions[i]] = true} or nil, true, true)
@@ -113,7 +152,18 @@ local function predict(case)
     return result
 end
 love.update = function(dt)
+    if fast_test then
+        local mode = cases[index] and cases[index].speed_mode
+        space_held = mode == 'held' or (mode == 'toggle' and pending and pending.started
+            and math.floor((G.TIMERS.REAL - pending.started) / 0.2) % 2 == 1) or false
+        sampled_speed = nil
+    end
     update_game(dt)
+    if fast_test and sampled_speed then
+        if G.SPEEDFACTOR ~= sampled_speed or G.SETTINGS.GAMESPEED ~= 4 then
+            report('FAIL speed multiplier / saved speed mismatch'); love.event.quit(1); return
+        end
+    end
     elapsed = elapsed + dt
     if elapsed < 0.3 then return end
     elapsed = 0
@@ -128,6 +178,23 @@ love.update = function(dt)
                 local actual = G.GAME.chips - pending.before
                 assert(actual == pending.expected, pending.name .. ': preview=' .. pending.expected .. ' actual=' .. actual)
                 report('PASS ' .. pending.name .. ' = ' .. actual)
+                if fast_test then
+                    local case = cases[index]
+                    local duration = G.TIMERS.REAL - pending.started
+                    report('DURATION ' .. case.name .. ' ' .. string.format('%.3f', duration)
+                        .. 's; boosted=' .. boost_frames .. ' normal=' .. normal_frames)
+                    if case.speed_mode == 'normal' then
+                        assert(boost_frames == 0 and normal_frames > 0)
+                        durations[case.base_name] = duration
+                        normal_scores[case.base_name] = actual
+                    else
+                        assert(actual == normal_scores[case.base_name], 'speed changed score for identical seeded input')
+                        assert(boost_frames > 0, 'space never accelerated scoring')
+                        if case.speed_mode == 'held' then
+                            assert(duration < durations[case.base_name], 'held space did not shorten scoring')
+                        else assert(normal_frames > 0, 'release never restored normal speed') end
+                    end
+                end
                 pending = nil
             end
             index = index + 1
@@ -139,6 +206,7 @@ love.update = function(dt)
             if index == 3 then capture('score-preview') end
             stage = 5; elapsed = -0.4
         elseif stage == 5 then
+            if fast_test then pending.started = G.TIMERS.REAL; boost_frames, normal_frames = 0, 0 end
             G.FUNCS.play_cards_from_highlighted(nil)
             stage = 3; elapsed = -1
         end
