@@ -41,11 +41,11 @@
 
 适配本机原版内容和本 Mod 的开局设置；不保证其他 Mod 新增计分机制的兼容性。预览使用副本与独立随机数发生器，实际出牌仍由原版计分流程处理。
 
-## 空格加速结算
+## 空格加速动画
 
-在出牌计分、小丑牌触发及回合结算动画中，**按住空格键**即可在当前速度基础上额外加速 **4 倍**，松开立即恢复。例如游戏速度设为 1 倍时变为 4 倍，设为 4 倍时变为 16 倍；原版长结算自带的加速也会保留。
+对局中**按住空格键**，所有游戏动画（出牌计分、小丑牌触发、回合结算、开卡包、星球牌升级牌型、塔罗/幻灵牌使用、发牌、商店刷新、盲注选择等）在当前速度基础上额外加速 **4 倍**，松开立即恢复。例如游戏速度设为 1 倍时变为 4 倍，设为 4 倍时变为 16 倍；原版长结算自带的加速也会保留。
 
-只推进正常动画与事件计时，不跳过小丑牌效果或计分步骤，也不会修改保存的游戏速度。选牌、商店、设置、文字输入、暂停及窗口失去焦点时不启用加速。Windows 和 Linux Proton 使用同一空格键。
+只推进正常动画与事件计时，不跳过任何效果或计分步骤，也不会修改保存的游戏速度。主菜单、设置等弹出菜单、文字输入、暂停、转场及窗口失去焦点时不启用加速。Windows 和 Linux Proton 使用同一空格键。
 
 ## 文件位置
 
@@ -150,7 +150,7 @@ python3 install-linux.py --update
 
 **卸载：** 关闭游戏，将已安装的 `Mods/Yubalatro` 文件夹移到 `Mods` 之外备份。卸载时不必恢复旧存档；如果没有其他 Mod 依赖 Lovely，且游戏目录的 `version.dll` 是本脚本安装的版本，也可将该 DLL 移到游戏目录之外，并撤去对应的启动选项。`installation-linux.txt` 记录了安装路径和 DLL 哈希。
 
-Linux 安装流程已通过 WSL/Linux 中的模拟目录测试；目前未在真实 Linux Steam / Proton 游戏进程中验证计分与界面。
+Linux 安装流程已通过 WSL/Linux 中的模拟目录测试；目前未在真实 Linux Steam / Proton 游戏进程中验证计分与界面。在 Linux 上验证、查看日志和调试的步骤见 [docs/LINUX_TESTING.md](docs/LINUX_TESTING.md)。
 
 ### 存档和自定义设置
 
@@ -184,6 +184,7 @@ powershell -ExecutionPolicy Bypass -File .\uninstall.ps1
 - `py -3.12 tests/build_qa.py`：从本机游戏构建仅用于测试的副本，使用独立 `YubalatroQA` 存档目录；其自动测试驱动不会安装进正式 Mod。
 - `py -3.12 tests/build_qa.py --lovely --ui-layout`：检查加减、跨位数、直接输入和重置后下一帧的文字可见范围，复现并防止多输入框光标导致的布局错位。
 - `py -3.12 tests/build_qa.py --lovely --scoring`：使用实际 Lovely 加载和自动出牌测试，核对预览与实际得分，以及正常和异常路径上的状态恢复。运行 QA 副本时使用 `--mod-dir` 指向测试 Mod 目录。
-- `py -3.12 tests/build_qa.py --lovely --fast-forward`：以正常速度、持续按空格、反复按下松开三种方式运行计分场景，核对实际得分、速度恢复和结算耗时。测试驱动模拟按键和窗口焦点，不会安装进正式 Mod。
+- `py -3.12 tests/build_qa.py --lovely --fast-forward`：以正常速度、持续按空格、反复按下松开三种方式运行计分场景，核对实际得分、速度恢复和结算耗时；再分别以正常速度和按住空格使用星球牌升级牌型、打开并跳过天体包，核对全程加速与耗时缩短。测试驱动模拟按键和窗口焦点，不会安装进正式 Mod。
+- 以上 `verify.py` / `build_qa.py` 仅支持 Windows；Linux 上的手动测试清单和调试方法见 [docs/LINUX_TESTING.md](docs/LINUX_TESTING.md)。
 
 `backups`、`.qa` 和 `.cache` 含本机游戏、个人存档或下载文件，已加入 `.gitignore`，不属于 Mod 源码。

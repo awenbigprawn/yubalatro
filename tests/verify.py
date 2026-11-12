@@ -133,14 +133,16 @@ def verify():
         assert(M.defaults().discards == 1)
         -- Physical key polling must also work while normal game input is locked.
         G.STAGES = {RUN = 1, MAIN_MENU = 2}
-        G.STATES = {HAND_PLAYED = 1, NEW_ROUND = 2, ROUND_EVAL = 3, SELECTING_HAND = 4, SHOP = 5}
+        G.STATES = {HAND_PLAYED = 1, NEW_ROUND = 2, ROUND_EVAL = 3, SELECTING_HAND = 4, SHOP = 5,
+            TAROT_PACK = 6, PLANET_PACK = 7, SPECTRAL_PACK = 8, STANDARD_PACK = 9, BUFFOON_PACK = 10,
+            PLAY_TAROT = 11, DRAW_TO_HAND = 12, BLIND_SELECT = 13}
         G.STAGE = G.STAGES.RUN
         local held, focused = true, true
         love.keyboard = {isDown = function(key) assert(key == 'space'); return held end}
         love.window = {hasFocus = function() return focused end}
         G.CONTROLLER.locked = true
         G.SETTINGS.GAMESPEED = 2
-        for _, state in ipairs({1, 2, 3}) do
+        for state = 1, 13 do -- every in-run state, including packs and planet level-ups
             G.STATE = state; assert(M.fast_forward_multiplier() == 4)
         end
         held = false; assert(M.fast_forward_multiplier() == 1); held = true
@@ -149,7 +151,6 @@ def verify():
         G.OVERLAY_MENU = {}; assert(M.fast_forward_multiplier() == 1); G.OVERLAY_MENU = nil
         G.CONTROLLER.text_input_hook = {}; assert(M.fast_forward_multiplier() == 1); G.CONTROLLER.text_input_hook = nil
         G.screenwipe = {}; assert(M.fast_forward_multiplier() == 1); G.screenwipe = nil
-        for _, state in ipairs({4, 5}) do G.STATE = state; assert(M.fast_forward_multiplier() == 1) end
         G.STATE = 1; G.STAGE = G.STAGES.MAIN_MENU; assert(M.fast_forward_multiplier() == 1)
         assert(G.SETTINGS.GAMESPEED == 2, 'fast forward changed the saved speed')
     ''', 'behavior tests', True)

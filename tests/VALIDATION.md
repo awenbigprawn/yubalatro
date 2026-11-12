@@ -1,5 +1,14 @@
 # Validation — 2026-09-08
 
+Space fast-forward for all animations — 2026-11-13: the Space boost now applies
+in every in-run state (packs, planet/tarot use, dealing, shop, blind select), not
+only scoring and settlement. Windows / Lovely runtime with base speed 4: Pluto
+level-up 1.568 s normal vs 0.651 s held; Celestial pack open + skip + redraw
+3.103 s vs 1.335 s, every frame boosted while held. The same driver against the
+previous build failed (planet 1.568 s held, never boosted). Scoring replays still
+match (1760, 51944, 35) and all 24 regular scoring scenarios pass. Pause, menus,
+text input, screen wipes, main menu and focus loss still disable the boost.
+
 Space fast-forward update — 2026-09-12: Windows / Lovely gameplay tests replay
 three seeded inputs at normal speed, with Space held, and with Space toggled
 every 0.2 seconds. All nine runs match the simulator and the same-input baseline:

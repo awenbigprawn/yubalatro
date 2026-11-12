@@ -28,9 +28,8 @@ end
 function M.fast_forward_multiplier()
     if G.STAGE ~= G.STAGES.RUN or G.SETTINGS.paused or G.OVERLAY_MENU or G.screenwipe
         or (G.CONTROLLER and G.CONTROLLER.text_input_hook) then return 1 end
-    local settling = G.STATE == G.STATES.HAND_PLAYED or G.STATE == G.STATES.NEW_ROUND
-        or G.STATE == G.STATES.ROUND_EVAL
-    if settling and love.window.hasFocus() and love.keyboard.isDown('space') then return 4 end
+    -- Any in-run state: scoring, packs, planet level-ups, dealing, shop, blind select.
+    if love.window.hasFocus() and love.keyboard.isDown('space') then return 4 end
     return 1
 end
 

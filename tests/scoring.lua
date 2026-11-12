@@ -6,6 +6,12 @@ local fast_test = YUBALATRO_QA_FAST_FORWARD
 local space_held, sampled_speed = false, nil
 local boost_frames, normal_frames, durations = 0, 0, {}
 local starting_rng, normal_scores = {}, {}
+-- After scoring: non-scoring animations (planet level-up, pack open/skip/redraw).
+local extras = {
+    {kind = 'planet', mode = 'normal'}, {kind = 'planet', mode = 'held'},
+    {kind = 'pack', mode = 'normal'}, {kind = 'pack', mode = 'held'},
+}
+local extra_index, extra, extra_boost, extra_normal, extra_durations = 0, nil, 0, 0, {}
 local cases = {
     {name = 'high card', ranks = {'H_A'}},
     {name = 'pair', ranks = {'H_5', 'S_5'}},
@@ -82,6 +88,9 @@ love.load = function()
             if G.STATE == G.STATES.HAND_PLAYED then
                 if factor == 4 then boost_frames = boost_frames + 1 else normal_frames = normal_frames + 1 end
             end
+            if extra and extra.started then
+                if factor == 4 then extra_boost = extra_boost + 1 else extra_normal = extra_normal + 1 end
+            end
             return factor
         end
     end
@@ -151,11 +160,66 @@ local function predict(case)
     assert(failed == nil and equal(rng, G.GAME.pseudorandom) and equal(hands, G.GAME.hands) and triggered == G.GAME.blind.triggered)
     return result
 end
+local function events_idle()
+    for _, queue in pairs(G.E_MANAGER.queues) do
+        for _, ev in ipairs(queue) do if ev.blocking and not ev.complete then return false end end
+    end
+    return true
+end
+local function start_extra()
+    extra = extras[extra_index]
+    if extra.kind == 'planet' then
+        extra.level = G.GAME.hands['High Card'].level
+        local card = create_card('Planet', G.consumeables, nil, nil, nil, nil, 'c_pluto')
+        card:add_to_deck(); G.consumeables:emplace(card)
+        extra.card = card
+    else
+        extra.card = Card(G.play.T.x + G.play.T.w/2 - G.CARD_W*1.27/2, G.play.T.y + G.play.T.h/2 - G.CARD_H*1.27/2,
+            G.CARD_W*1.27, G.CARD_H*1.27, G.P_CARDS.empty, G.P_CENTERS.p_celestial_normal_1,
+            {bypass_discovery_center = true, bypass_discovery_ui = true})
+        extra.card.cost = 0; extra.card.from_tag = true
+        extra.old_area = G.pack_cards -- Vanilla leaves the previous, removed area here.
+    end
+end
+local function trigger_extra()
+    extra.started, extra_boost, extra_normal = G.TIMERS.REAL, 0, 0
+    G.FUNCS.use_card({config = {ref_table = extra.card}})
+    if extra.kind == 'pack' then extra.card:start_materialize() end
+end
+-- Polled every frame so durations are not quantised by the 0.3 s driver tick.
+local function poll_extra()
+    local settled = G.STATE == G.STATES.SELECTING_HAND and G.STATE_COMPLETE and #G.hand.cards > 0
+        and not G.CONTROLLER.locks.use and events_idle()
+    if extra.kind == 'pack' and not extra.skipped then
+        if G.STATE == G.STATES.PLANET_PACK and G.pack_cards and G.pack_cards ~= extra.old_area
+                and G.pack_cards.cards and #G.pack_cards.cards > 0 and events_idle() then
+            G.FUNCS.skip_booster(); extra.skipped = true
+        end
+        return
+    end
+    if not settled or (extra.kind == 'pack' and G.booster_pack) then return end
+    local duration = G.TIMERS.REAL - extra.started
+    report('DURATION ' .. extra.kind .. ' / ' .. extra.mode .. ' ' .. string.format('%.3f', duration)
+        .. 's; boosted=' .. extra_boost .. ' normal=' .. extra_normal)
+    if extra.kind == 'planet' then
+        assert(G.GAME.hands['High Card'].level == extra.level + 1, 'planet did not level up High Card')
+    end
+    if extra.mode == 'normal' then
+        assert(extra_boost == 0, 'boosted without space')
+        extra_durations[extra.kind] = duration
+    else
+        assert(extra_normal == 0 and extra_boost > 0, extra.kind .. ' was not boosted throughout')
+        assert(duration < extra_durations[extra.kind] * 0.6, extra.kind .. ' was not clearly faster with space held')
+    end
+    report('PASS ' .. extra.kind .. ' / ' .. extra.mode)
+    extra = nil; stage = 20; elapsed = -0.6
+end
 love.update = function(dt)
     if fast_test then
         local mode = cases[index] and cases[index].speed_mode
         space_held = mode == 'held' or (mode == 'toggle' and pending and pending.started
             and math.floor((G.TIMERS.REAL - pending.started) / 0.2) % 2 == 1) or false
+        if extra then space_held = extra.mode == 'held' end
         sampled_speed = nil
     end
     update_game(dt)
@@ -163,6 +227,11 @@ love.update = function(dt)
         if G.SPEEDFACTOR ~= sampled_speed or G.SETTINGS.GAMESPEED ~= 4 then
             report('FAIL speed multiplier / saved speed mismatch'); love.event.quit(1); return
         end
+    end
+    if extra and extra.started and stage == 22 then
+        local ok, err = pcall(poll_extra)
+        if not ok then report('FAIL ' .. tostring(err)); love.event.quit(1) end
+        return
     end
     elapsed = elapsed + dt
     if elapsed < 0.3 then return end
@@ -198,7 +267,11 @@ love.update = function(dt)
                 pending = nil
             end
             index = index + 1
-            if not cases[index] then report('ALL SCORING TESTS PASS'); love.event.quit(); return end
+            if not cases[index] then
+                report('ALL SCORING TESTS PASS')
+                if fast_test then stage = 20; return end
+                love.event.quit(); return
+            end
             setup(cases[index]); stage = 4; elapsed = -0.6
         elseif stage == 4 then
             local case = cases[index]
@@ -209,6 +282,12 @@ love.update = function(dt)
             if fast_test then pending.started = G.TIMERS.REAL; boost_frames, normal_frames = 0, 0 end
             G.FUNCS.play_cards_from_highlighted(nil)
             stage = 3; elapsed = -1
+        elseif stage == 20 and G.STATE == G.STATES.SELECTING_HAND and events_idle() then
+            extra_index = extra_index + 1
+            if not extras[extra_index] then report('ALL FAST-FORWARD ANIMATION TESTS PASS'); love.event.quit(); return end
+            start_extra(); stage = 21; elapsed = -0.6
+        elseif stage == 21 then
+            trigger_extra(); stage = 22
         end
     end)
     if not ok then report('FAIL ' .. tostring(err)); love.event.quit(1) end
